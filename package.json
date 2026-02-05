@@ -23,7 +23,8 @@
     "react-markdown": "^9.0.1",
     "clsx": "^2.1.0",
     "react-dropzone": "^14.2.3",
-    "eventsource-parser": "^1.1.1"
+    "@microsoft/fetch-event-source": "^2.0.1",
+    "recharts": "^2.10.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
