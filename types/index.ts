@@ -24,3 +24,12 @@ export interface ChatSettings {
   maxTokens: number
   model: string
 }
+
+export interface Session {
+  id: string
+  name: string
+  messages: Message[]
+  mode: ChatMode
+  createdAt: Date
+  updatedAt: Date
+}

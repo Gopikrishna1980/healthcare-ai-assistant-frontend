@@ -1,9 +1,10 @@
-import { X, Upload, BarChart3, Trash2, Download, MessageSquare, FileText, Search, Settings } from 'lucide-react'
+import { X, Upload, BarChart3, Trash2, Download, MessageSquare, FileText, Search, Settings, FolderOpen, Plus } from 'lucide-react'
 import { useState } from 'react'
 import DocumentUpload from './DocumentUpload'
 import MetricsDashboard from './MetricsDashboard'
+import SessionManager from './SessionManager'
 import clsx from 'clsx'
-import { Message } from '@/types'
+import { Message, Session } from '@/types'
 
 interface SidebarProps {
   isOpen: boolean
@@ -13,11 +14,31 @@ interface SidebarProps {
   messages?: Message[]
   onSearch?: (query: string) => void
   onExportPDF?: () => void
+  sessions?: Session[]
+  currentSessionId?: string | null
+  onSaveSession?: (name: string) => void
+  onLoadSession?: (session: Session) => void
+  onDeleteSession?: (sessionId: string) => void
+  onNewSession?: () => void
 }
 
-type SidebarView = 'menu' | 'upload' | 'metrics' | 'search' | 'settings'
+type SidebarView = 'menu' | 'upload' | 'metrics' | 'search' | 'settings' | 'sessions'
 
-export default function Sidebar({ isOpen, onClose, onClearConversation, messageCount, messages = [], onSearch, onExportPDF }: SidebarProps) {
+export default function Sidebar({ 
+  isOpen, 
+  onClose, 
+  onClearConversation, 
+  messageCount, 
+  messages = [], 
+  onSearch, 
+  onExportPDF,
+  sessions = [],
+  currentSessionId = null,
+  onSaveSession,
+  onLoadSession,
+  onDeleteSession,
+  onNewSession,
+}: SidebarProps) {
   const [currentView, setCurrentView] = useState<SidebarView>('menu')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -64,6 +85,7 @@ export default function Sidebar({ isOpen, onClose, onClearConversation, messageC
               {currentView === 'metrics' && 'Metrics'}
               {currentView === 'search' && 'Search'}
               {currentView === 'settings' && 'Settings'}
+              {currentView === 'sessions' && 'Sessions'}
             </h2>
             <button
               onClick={() => currentView === 'menu' ? onClose() : setCurrentView('menu')}
@@ -78,8 +100,24 @@ export default function Sidebar({ isOpen, onClose, onClearConversation, messageC
             {currentView === 'menu' && (
               <div className="space-y-2">
                 <button
-                  onClick={() => setCurrentView('upload')}
+                  onClick={onNewSession}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">New Session</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('sessions')}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <FolderOpen className="w-5 h-5" />
+                  <span className="font-medium">Manage Sessions ({sessions.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setCurrentView('upload')}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   <Upload className="w-5 h-5" />
                   <span className="font-medium">Upload Documents</span>
@@ -178,6 +216,16 @@ export default function Sidebar({ isOpen, onClose, onClearConversation, messageC
                     ))}
                 </div>
               </div>
+            )}
+            
+            {currentView === 'sessions' && onSaveSession && onLoadSession && onDeleteSession && (
+              <SessionManager
+                sessions={sessions}
+                currentSessionId={currentSessionId}
+                onSaveSession={onSaveSession}
+                onLoadSession={onLoadSession}
+                onDeleteSession={onDeleteSession}
+              />
             )}
             
             {currentView === 'settings' && (

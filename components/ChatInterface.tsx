@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import ChatHeader from './ChatHeader'
 import MessageList from './MessageList'
 import ChatInput from './ChatInput'
 import ModeSelector from './ModeSelector'
 import Sidebar from './Sidebar'
-import { Message, ChatMode } from '@/types'
+import { Message, ChatMode, Session } from '@/types'
 import { streamChat, clearConversation } from '@/lib/api'
 
 export default function ChatInterface() {
@@ -18,6 +18,44 @@ export default function ChatInterface() {
   const [showSidebar, setShowSidebar] = useState(false)
   const [lastUserMessage, setLastUserMessage] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+
+  // Load sessions from localStorage on mount
+  useEffect(() => {
+    const savedSessions = localStorage.getItem('chatSessions')
+    if (savedSessions) {
+      try {
+        const parsed = JSON.parse(savedSessions)
+        // Convert date strings back to Date objects
+        const sessionsWithDates = parsed.map((s: any) => ({
+          ...s,
+          createdAt: new Date(s.createdAt),
+          updatedAt: new Date(s.updatedAt),
+          messages: s.messages.map((m: any) => ({
+            ...m,
+            timestamp: new Date(m.timestamp),
+          })),
+        }))
+        setSessions(sessionsWithDates)
+      } catch (error) {
+        console.error('Error loading sessions:', error)
+      }
+    }
+  }, [])
+
+  // Auto-save current session
+  useEffect(() => {
+    if (currentSessionId && messages.length > 0) {
+      const updatedSessions = sessions.map(s =>
+        s.id === currentSessionId
+          ? { ...s, messages, mode, updatedAt: new Date() }
+          : s
+      )
+      setSessions(updatedSessions)
+      localStorage.setItem('chatSessions', JSON.stringify(updatedSessions))
+    }
+  }, [messages, mode])
 
   const handleSendMessage = async (content: string) => {
     setLastUserMessage(content)
@@ -152,6 +190,46 @@ export default function ChatInterface() {
     }
   }
 
+  const handleSaveSession = (name: string) => {
+    const newSession: Session = {
+      id: Date.now().toString(),
+      name,
+      messages: [...messages],
+      mode,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    const updatedSessions = [...sessions, newSession]
+    setSessions(updatedSessions)
+    setCurrentSessionId(newSession.id)
+    localStorage.setItem('chatSessions', JSON.stringify(updatedSessions))
+  }
+
+  const handleLoadSession = (session: Session) => {
+    setMessages(session.messages)
+    setMode(session.mode)
+    setCurrentSessionId(session.id)
+    setShowSidebar(false)
+  }
+
+  const handleDeleteSession = (sessionId: string) => {
+    const updatedSessions = sessions.filter(s => s.id !== sessionId)
+    setSessions(updatedSessions)
+    localStorage.setItem('chatSessions', JSON.stringify(updatedSessions))
+    if (currentSessionId === sessionId) {
+      setCurrentSessionId(null)
+      setMessages([])
+      setMode('standard')
+    }
+  }
+
+  const handleNewSession = () => {
+    setMessages([])
+    setMode('standard')
+    setCurrentSessionId(null)
+    setShowSidebar(false)
+  }
+
   return (
     <div className="flex h-screen max-w-full mx-auto">
       {/* Sidebar */}
@@ -163,6 +241,12 @@ export default function ChatInterface() {
         messages={messages}
         onSearch={handleSearch}
         onExportPDF={handleExportPDF}
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        onSaveSession={handleSaveSession}
+        onLoadSession={handleLoadSession}
+        onDeleteSession={handleDeleteSession}
+        onNewSession={handleNewSession}
       />
 
       {/* Main Chat Area */}
