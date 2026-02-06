@@ -11,12 +11,16 @@ import { streamChat, clearConversation } from '@/lib/api'
 
 export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
+  const [filteredMessages, setFilteredMessages] = useState<Message[]>([])
   const [mode, setMode] = useState<ChatMode>('standard')
   const [isLoading, setIsLoading] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState<string>('')
   const [showSidebar, setShowSidebar] = useState(false)
+  const [lastUserMessage, setLastUserMessage] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleSendMessage = async (content: string) => {
+    setLastUserMessage(content)
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -82,6 +86,72 @@ export default function ChatInterface() {
     }
   }
 
+  const handleRegenerate = () => {
+    if (lastUserMessage) {
+      // Remove last assistant message
+      setMessages(prev => prev.slice(0, -1))
+      // Resend last user message
+      handleSendMessage(lastUserMessage)
+    }
+  }
+
+  const handleReaction = (messageId: string, reaction: 'like' | 'dislike') => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, reaction: msg.reaction === reaction ? null : reaction }
+        : msg
+    ))
+  }
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query)
+    if (query === '') {
+      setFilteredMessages([])
+    } else {
+      setFilteredMessages(
+        messages.filter(msg =>
+          msg.content.toLowerCase().includes(query.toLowerCase())
+        )
+      )
+    }
+  }
+
+  const handleExportPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF()
+      
+      doc.setFontSize(20)
+      doc.text('Healthcare AI Chat', 20, 20)
+      doc.setFontSize(10)
+      doc.text(`Exported: ${new Date().toLocaleString()}`, 20, 30)
+      doc.text(`Total Messages: ${messages.length}`, 20, 36)
+      
+      let yPosition = 50
+      messages.forEach((msg, index) => {
+        if (yPosition > 270) {
+          doc.addPage()
+          yPosition = 20
+        }
+        
+        doc.setFontSize(12)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${msg.role === 'user' ? 'You' : 'AI'}:`, 20, yPosition)
+        
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(10)
+        const lines = doc.splitTextToSize(msg.content, 170)
+        doc.text(lines, 20, yPosition + 6)
+        yPosition += (lines.length * 5) + 12
+      })
+      
+      doc.save(`healthcare-chat-${Date.now()}.pdf`)
+    } catch (error) {
+      console.error('Error exporting PDF:', error)
+      alert('Failed to export PDF')
+    }
+  }
+
   return (
     <div className="flex h-screen max-w-full mx-auto">
       {/* Sidebar */}
@@ -90,6 +160,9 @@ export default function ChatInterface() {
         onClose={() => setShowSidebar(false)}
         onClearConversation={handleClearConversation}
         messageCount={messages.length}
+        messages={messages}
+        onSearch={handleSearch}
+        onExportPDF={handleExportPDF}
       />
 
       {/* Main Chat Area */}
@@ -101,6 +174,8 @@ export default function ChatInterface() {
             messages={messages} 
             isLoading={isLoading}
             streamingMessage={streamingMessage}
+            onRegenerate={handleRegenerate}
+            onReaction={handleReaction}
           />
         </div>
         <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />

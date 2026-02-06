@@ -7,9 +7,11 @@ interface MessageListProps {
   messages: Message[]
   isLoading: boolean
   streamingMessage?: string
+  onRegenerate?: () => void
+  onReaction?: (messageId: string, reaction: 'like' | 'dislike') => void
 }
 
-export default function MessageList({ messages, isLoading, streamingMessage }: MessageListProps) {
+export default function MessageList({ messages, isLoading, streamingMessage, onRegenerate, onReaction }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,9 +50,20 @@ export default function MessageList({ messages, isLoading, streamingMessage }: M
         </div>
       ) : (
         <div className="space-y-4">
-          {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
-          ))}
+          {messages.map((message, index) => {
+            const isLastAssistant = message.role === 'assistant' && 
+              index === messages.length - 1 && 
+              !isLoading
+            return (
+              <ChatMessage 
+                key={message.id} 
+                message={message}
+                isLastAssistant={isLastAssistant}
+                onRegenerate={onRegenerate}
+                onReaction={onReaction}
+              />
+            )
+          })}
           
           {/* Streaming message */}
           {streamingMessage && (

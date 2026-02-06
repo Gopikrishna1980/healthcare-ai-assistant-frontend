@@ -52,7 +52,7 @@ export async function streamChat(options: StreamOptions) {
           console.error('Error parsing SSE data:', err)
         }
       },
-      onerror(err) {
+      onerror(err: Error) {
         console.error('SSE error:', err)
         onError?.(err as Error)
         throw err // Stop retrying

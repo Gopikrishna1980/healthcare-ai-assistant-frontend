@@ -16,4 +16,11 @@ export interface Message {
     total_cost: number
   }
   isError?: boolean
+  reaction?: 'like' | 'dislike' | null
+}
+
+export interface ChatSettings {
+  temperature: number
+  maxTokens: number
+  model: string
 }
